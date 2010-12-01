@@ -30,7 +30,7 @@ def get_name(x):
 def set_name(x,name):
     x=str(x)
     names.update({x:name})
-
+port='/dev/ttyUSB0'
 def init():
     global ser
     global port
@@ -102,7 +102,7 @@ class ThreadedTCPHandler(SocketServer.BaseRequestHandler):
             result={'result':'error'}
             self.request.send(json.dumps(result))
             return
-        print obj
+        print 'request:',obj
         if obj['action']=='power_on':
             if power_on_pin(obj['n']):
                 result={'result':'ok'}
@@ -127,7 +127,7 @@ class ThreadedTCPHandler(SocketServer.BaseRequestHandler):
         elif obj['action']=='reload_names':
             load_names()
             result={'result':'ok'}
-        print 'replied'
+        print 'response:',json.dumps(result),'\n'
         self.request.send(json.dumps(result))
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
