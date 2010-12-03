@@ -70,7 +70,10 @@ def clear_input():
     try:
         ser.FlushInput()
     except:
-        return init()
+        if init():
+            ser.FlushInput()
+        else:
+            raise serial.SerialException('Cannot flush input')
 
 def power_on_pin(x):
     return write_to_serial(chr(4)+chr(int(x)))
@@ -79,13 +82,17 @@ def power_off_pin(x):
     return write_to_serial(chr(5)+chr(int(x)))
 
 def get_state_of_pin(x):
+    try:
+        clear_input()
+    except:
+        raise serial.SerialException('Cannot flush input.')
     if not write_to_serial(chr(3)+chr(x)):
-        raise serial.SerialException('fail')
+        raise serial.SerialException('Cannot write to Serial.')
     time.sleep(0.3)
     try:
         r=read_from_serial()
     except:
-        raise serial.SerialException('fail')
+        raise serial.SerialException('Cannot read from serial.')
     return r=='1'
 
 
@@ -127,8 +134,9 @@ class ThreadedTCPHandler(SocketServer.BaseRequestHandler):
         elif obj['action']=='reload_names':
             load_names()
             result={'result':'ok'}
-        print 'response:',json.dumps(result),'\n'
-        self.request.send(json.dumps(result))
+        z=json.dumps(result)
+        print 'response:',z,'\n'
+        self.request.send(z)
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
