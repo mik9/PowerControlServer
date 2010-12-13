@@ -5,6 +5,17 @@ import time
 import serial
 import json
 import sys
+import os
+
+l = [x for x in os.listdir('/dev') if 'USB' in x]
+if len(l)>1:
+    print 'Available serial interfaces:'
+    for i in xrange(len(l)):
+        print '%d. %s' % (i,l[i])
+    choice = int(raw_input('Pick some one:'))
+    port = '/dev/'+l[i]
+else:
+    port = '/dev/'+l[0]
 
 names={}
 def load_names():
@@ -30,7 +41,7 @@ def get_name(x):
 def set_name(x,name):
     x=str(x)
     names.update({x:name})
-port='/dev/ttyUSB0'
+
 def init():
     global ser
     global port
