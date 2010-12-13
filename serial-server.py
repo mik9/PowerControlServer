@@ -11,13 +11,13 @@ def load_names():
     global names
     with open('names','r') as s:
         for line in s:
-            names.update({line.split(' ')[0]:line.split(' ')[1][:-1]})
+            names.update({line.split(' ')[0]:' '.join(line.split(' ')[1:])[:-1]})
 load_names()
 def save_names():
     global names
     with open('names','w') as s:
         for i in names:
-            s.write(i+' '+names[i]+'\n')
+            s.write(i+' '+names[i].encode('utf-8')+'\n')
         
 def get_name(x):
     global names
@@ -36,64 +36,87 @@ def init():
     global port
     global error
     try:
-        ser = serial.Serial(port or '/dev/ttyUSB0',timeout=5)
+        ser = serial.Serial(port,timeout=5)
     except serial.SerialException,e:
-        error=e.message
+        print 'Can\'t initialize serial port'
         return False
     time.sleep(1)
     ser.setDTR(level=0)
     time.sleep(1)
     return True
-
+init()
 def write_to_serial(x):
     try:
         ser.write(x)
     except:
         if init():
             ser.write(x)
-            return True
         else:
+            print 'Fails ro write'
             return False
+    return True
 
 def read_from_serial():
     try:
         r=ser.read()
-        return r
     except:
         if init():
             r=ser.read()
-            return r
         else:
             raise serial.SerialException('Can\'t read from serial')
+    return r
 
 def clear_input():
     try:
-        ser.FlushInput()
+        ser.flushInput()
     except:
         if init():
             ser.FlushInput()
         else:
             raise serial.SerialException('Cannot flush input')
 
-def power_on_pin(x):
-    return write_to_serial(chr(4)+chr(int(x)))
+def power_on(x):
+    if x=='all':
+        # power on all
+        return write_to_serial(chr(1))
+    else:
+        # power on x
+        return write_to_serial(chr(4)+chr(int(x)))
 
-def power_off_pin(x):
-    return write_to_serial(chr(5)+chr(int(x)))
+def power_off(x):
+    if x=='all':
+        # power off all
+        return write_to_serial(chr(0))
+    else:
+        # power off x
+        return write_to_serial(chr(5)+chr(int(x)))
 
 def get_state_of_pin(x):
     try:
-        clear_input()
+        #clear_input()
+        pass
     except:
+        print 'Cannot flush input.'
         raise serial.SerialException('Cannot flush input.')
-    if not write_to_serial(chr(3)+chr(x)):
-        raise serial.SerialException('Cannot write to Serial.')
-    time.sleep(0.3)
-    try:
-        r=read_from_serial()
-    except:
-        raise serial.SerialException('Cannot read from serial.')
-    return r=='1'
+    if x=='all':
+        if not write_to_serial(chr(6)):
+            print 'Cannot write to Serial.'
+            raise serial.SerialException('Cannot write to Serial.')
+        print 'waiting'
+        time.sleep(0.3)
+        r=ser.readline()[:-1]
+        return r
+    else:
+        if not write_to_serial(chr(3)+chr(int(x))):
+            print 'Cannot write to Serial.'
+            raise serial.SerialException('Cannot write to Serial.')
+        time.sleep(0.3)
+        try:
+            r=read_from_serial()
+        except:
+            print 'Cannot read from serial.'
+            raise serial.SerialException('Cannot read from serial.')
+        return r=='1'
 
 
 class ThreadedTCPHandler(SocketServer.BaseRequestHandler):
@@ -111,12 +134,12 @@ class ThreadedTCPHandler(SocketServer.BaseRequestHandler):
             return
         print 'request:',obj
         if obj['action']=='power_on':
-            if power_on_pin(obj['n']):
+            if power_on(obj['n']):
                 result={'result':'ok'}
             else:
                 result={'result':'error'}
         elif obj['action']=='power_off':
-            if power_off_pin(obj['n']):
+            if power_off(obj['n']):
                 result={'result':'ok'}
             else:
                 result={'result':'error'}
